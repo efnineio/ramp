@@ -11,6 +11,16 @@ class RampBaseObject(FromJsonMixin, ToJsonMixin, ToDictMixin):
         return "{}/{}s".format(client.base_resource_path, cls._doc_type)  # no trailing slash
 
     @classmethod
+    def get(cls, id, client):
+        resource_ep = cls.get_endpoint(client)
+        ep = "{}/{}".format(resource_ep,id)
+        res = client.hit_api(verb='GET', endpoint=ep)
+        res.raise_for_status()
+        json_data = res.json()
+        return cls.from_json(json_data)
+
+
+    @classmethod
     def filter(cls, client, pagination=False, **kwargs):
 
         params = {}
@@ -33,9 +43,9 @@ class RampBaseObject(FromJsonMixin, ToJsonMixin, ToDictMixin):
         res.raise_for_status()
         json_data = res.json()
         from pprint import pprint
-
+        #pprint(json_data)
         objs = []
-        for obj_data in json_data:
+        for obj_data in json_data.get('data',[]):
             objs.append(cls.from_json(obj_data))
 
         return objs

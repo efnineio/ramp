@@ -4,17 +4,22 @@ from urllib.parse import urlencode, parse_qs
 
 class RampClient(object):
     base_url = 'https://api.ramp.com'
-    base_resource_path = '/v1/public/customer/resources'
+    #base_resource_path = '/v1/public/customer/resources'
+    base_resource_path = "/developer/v1"
+
     auth_url = "https://app.ramp.com/v1/authorize"
-    token_url = 'https://api.ramp.com/v1/public/customer/token'
-    scopes = "transactions"
+    #token_url = 'https://api.ramp.com/v1/public/customer/token'
+    token_url = 'https://api.ramp.com/developer/v1/token'
+    scopes = ["transactions:read"]
 
     def get_auth_url(self):
 
         # auth request # just go to it in a browser
 
+        if self.client_id is None:
+            raise ValueError("Need to define a client secret to auth")
         params = {'response_type': 'code',
-                  'scope': self.scopes,
+                  'scope': " ".join(self.scopes),
                   'client_id': self.client_id,
                   'redirect_uri': self.redirect_uri
                   }
@@ -38,10 +43,12 @@ class RampClient(object):
                 'code': code,
                 'redirect_uri': self.redirect_uri
                 }
-        # print(data)
+
+
         res_2 = requests.post(self.token_url, data=data, auth=(self.client_id, self.client_secret))
         res_2.raise_for_status()
-
+        from pprint import pprint
+        pprint(res_2.json())
         self.token = res_2.json()['access_token']
 
         return self.token
@@ -62,7 +69,6 @@ class RampClient(object):
 
     def build_auth(self):
         self.s = requests.Session()
-
         self.s.headers.update({
             "Authorization": "Bearer {}".format(self.token)
         })
@@ -74,6 +80,16 @@ class RampClient(object):
         s.headers.update(headers)
         res = s.request(verb, url=url, data=data, params=params, json=json)
         return res
+
+    def is_authed(self):
+        test_url = "{}/transactions/c7f4c7fb-488e-471f-92d3-f352fcf2d464".format(self.base_resource_path)#todo temp
+        res = self.hit_api('GET',test_url)
+        if res.status_code == 401:
+            return False
+        elif res.status_code == 200:
+            return True
+        else:
+            raise ValueError("Can't determine if auth'd")
 
     def __init__(self, token=None, client_id= None, client_secret=None, redirect_uri=None):
         self.s = None
