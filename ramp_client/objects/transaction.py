@@ -18,5 +18,6 @@ class Transaction(RampBaseObject):
     class_dict = {"card_holder":CardHolder}
     list_dict = {}
 
+
     def __init__(self):
         super(Transaction, self).__init__()

@@ -4,11 +4,23 @@ from datetime import datetime, date
 class RampBaseObject(FromJsonMixin, ToJsonMixin, ToDictMixin):
     class_dict = {}
     list_dict = {}
+    _read_only_fields = []
     _required_fields = []
     _doc_type = None
+
     @classmethod
     def get_endpoint(cls, client):
+
         return "{}/{}s".format(client.base_resource_path, cls._doc_type)  # no trailing slash
+
+
+    def get_frontend_url(self, client=None):
+        if client: self._client = client
+        return "{}/business-overview/{}s/{}".format(client.base_frontend_url, self._doc_type, self.id)  # no trailing slash
+
+    def get_object_api_endpoint(self, client=None):
+        if client: self._client = client
+        return self.get_endpoint(self._client) + "/" + self.id
 
     @classmethod
     def get(cls, id, client):
@@ -17,7 +29,9 @@ class RampBaseObject(FromJsonMixin, ToJsonMixin, ToDictMixin):
         res = client.hit_api(verb='GET', endpoint=ep)
         res.raise_for_status()
         json_data = res.json()
-        return cls.from_json(json_data)
+        obj = cls.from_json(json_data)
+        obj._client = client
+        return obj
 
 
     @classmethod
@@ -46,7 +60,9 @@ class RampBaseObject(FromJsonMixin, ToJsonMixin, ToDictMixin):
         #pprint(json_data)
         objs = []
         for obj_data in json_data.get('data',[]):
-            objs.append(cls.from_json(obj_data))
+            new_obj = cls.from_json(obj_data)
+            new_obj._client=client
+            objs.append(new_obj)
 
         return objs
 

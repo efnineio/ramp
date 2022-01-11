@@ -6,9 +6,33 @@ from datetime import datetime, date
 
 
 
+# class ToJsonMixin(object):
+#     def to_json(self):
+#         return json.dumps(self, default=self.json_filter, sort_keys=True, indent=4)
+#
+#     def json_filter(self, obj):
+#         """
+#         filter out properties that have names starting with _
+#         or properties that have a value of None
+#         """
+#
+#         if isinstance(obj, (date, datetime)):
+#             return obj.isoformat()
+#         if hasattr(obj, "__dict__"):
+#             return {
+#                 k: v
+#                 for k, v in obj.__dict__.items()
+#                 if not k.startswith("_") and (getattr(obj, k) is not None or k in obj._required_fields)
+#             }
+#
+#         return obj
+
 class ToJsonMixin(object):
-    def to_json(self):
-        return json.dumps(self, default=self.json_filter, sort_keys=True, indent=4)
+    def to_json(self, read_only_fields=True):
+        if read_only_fields:
+            return json.dumps(self, default=self.json_filter, sort_keys=True, indent=4)
+        else:
+            return json.dumps(self, default=self.json_filter_no_ro, sort_keys=True, indent=4)
 
     def json_filter(self, obj):
         """
@@ -19,14 +43,49 @@ class ToJsonMixin(object):
         if isinstance(obj, (date, datetime)):
             return obj.isoformat()
         if hasattr(obj, "__dict__"):
-            return {
-                k: v
-                for k, v in obj.__dict__.items()
-                if not k.startswith("_") and (getattr(obj, k) is not None or k in obj._required_fields)
-            }
+            # return {
+            #     k: v
+            #     for k, v in obj.__dict__.items()
+            #     if not k.startswith("_") and (getattr(obj, k) is not None or k in obj._required_fields)
+            # }
+            answer = {}
+            for k, v in obj.__dict__.items():
+                if getattr(obj,'_field_dict', {}).get(k,{}).get('type') == 'jsonfield':
+                    answer[k] = json.dumps(v)
+                    continue
+
+                if not k.startswith("_") and (getattr(obj, k) is not None or k in obj._required_fields):
+                    answer[k] = v
+
+            return answer
 
         return obj
 
+    def json_filter_no_ro(self, obj):
+        """
+        filter out properties that have names starting with _
+        or properties that have a value of None
+        """
+
+        if isinstance(obj, (date, datetime)):
+            return obj.isoformat()
+        if hasattr(obj, "__dict__"):
+
+            answer = {}
+            for k, v in obj.__dict__.items():
+                if k in obj._read_only_fields:
+                    continue
+
+                if getattr(obj,'_field_dict', {}).get(k,{}).get('type') == 'jsonfield':
+                    answer[k] = json.dumps(v)
+                    continue
+
+                if not k.startswith("_") and (getattr(obj, k) is not None or k in obj._required_fields):
+                    answer[k] = v
+
+            return answer
+
+        return obj
 
 def to_dict(obj, classkey=None):
     """
@@ -112,3 +171,64 @@ class FromFileMixin(FromJsonMixin):
         return self.from_json(json.loads(str_read))
 
 
+import uuid
+import time
+import json
+
+
+class IdempotencyMixin(object):
+    def get_key(self):
+        return str(uuid.uuid4())
+
+
+# task_check_status =
+# {"data":{"card_id":"1c63c83d-df72-45a8-9154-74945f1e60e0"},
+# "id":"4618986a-b944-4f17-a071-c1b875921409",
+# "status":"SUCCESS"}\n'
+
+
+
+class DeferredTaskMixin(object):
+    def check_deferred_task(self, task_id):
+
+        ep = self.get_endpoint(self._client) + '/deferred/status/{}'.format(task_id)
+
+        r = self._client.hit_api(verb='GET', endpoint=ep)
+        return r
+
+    def run_deferred_task(self, task_id, client=None):
+        if client: self._client = client
+        i = 0
+        multiplier = 1.1
+        total_count = 10
+        delay = 1
+        task_status = None
+
+        while i < 10 and task_status != 'FAILED':
+            i += 1
+            r = self.check_deferred_task(task_id)
+            print(r.json())
+
+            # 'STARTED'
+            if r.status_code == 200:
+                # print(r.json())
+                task_status = r.json().get('status')
+                if task_status == 'SUCCESS':
+                    return r.json()
+            else:
+                task_status = 'FAILED'
+                return {'id': task_id, 'status': 'FAILED', 'data': {}}
+
+            time.sleep(delay)
+            delay = delay * multiplier
+
+
+class SaveMixin(object):
+    def save(self, client=None):
+        if client: self._client = client
+        ep = self.get_object_api_endpoint()
+
+        res = self._client.hit_api('PATCH', endpoint=ep, json=json.loads(self.to_json(read_only_fields=False)))
+        res.raise_for_status()
+
+        self.refresh()
