@@ -177,6 +177,7 @@ class RampClient(object):
         self.s = None
 
         self.access_token = access_token
+        self.refresh_token = None
         self.client_id = client_id
         self.client_secret = client_secret
         self.redirect_uri = redirect_uri
