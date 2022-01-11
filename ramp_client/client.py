@@ -3,6 +3,13 @@ import urllib.parse as urlparse
 from urllib.parse import urlencode, parse_qs
 import json
 from pprint import pprint
+from enum import Enum
+
+class GrantType(Enum):
+    """Represents an OAuth grant type supported by Ramp"""
+
+    AUTHORIZATION_CODE = "authorization_code"
+    CLIENT_CREDENTIALS = "client_credentials"
 
 class RampClient(object):
     base_url = 'https://api.ramp.com'
@@ -92,8 +99,13 @@ class RampClient(object):
             parsed = urlparse.urlparse(url)
             code = parse_qs(parsed.query)['code'][0]
 
-        if code:
-            data = {'grant_type': 'authorization_code',
+        if self.grant_type is GrantType.CLIENT_CREDENTIALS:
+            data = {
+                "grant_type": "client_credentials",
+                "scope": " ".join(self.scopes) if isinstance(self.scopes, (list, tuple)) else self.scopes,
+            }
+        elif self.grant_type is GrantType.AUTHORIZATION_CODE and code:
+            data = {'grant_type': "authorization_code",
                     'code': code,
                     'redirect_uri': self.redirect_uri
                     }
@@ -121,7 +133,7 @@ class RampClient(object):
         # print(self.refresh_token, "refresh token")
         # print(self.access_token, "access_token")
 
-        if self.refresh_token and not self.access_token:
+        if self.grant_type is GrantType.CLIENT_CREDENTIALS or (self.refresh_token and not self.access_token):
             # print("REFRESHING")
             try:
                 self.exchange_token()
@@ -160,20 +172,18 @@ class RampClient(object):
                  client_id=None,
                  client_secret=None,
                  redirect_uri=None,
-                 creds_file=None, scopes=None):
+                 creds_file=None, scopes=None, grant_type: GrantType = GrantType.AUTHORIZATION_CODE):
 
         self.s = None
+
+        self.access_token = access_token
+        self.client_id = client_id
+        self.client_secret = client_secret
+        self.redirect_uri = redirect_uri
+        self.creds_file = creds_file
+        self.scopes = scopes
+        self.grant_type = grant_type
+
         if creds_file:
-            self.creds_file = creds_file
             self.access_token = None
             self.load_creds_file()
-
-        else:
-            self.access_token = access_token
-            self.client_id = client_id
-            self.client_secret = client_secret
-            self.redirect_uri = redirect_uri
-            self.scopes = scopes
-
-
-
