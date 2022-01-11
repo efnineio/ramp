@@ -1,3 +1,3 @@
 # Ramp Client
 
-An API Wrapper for interacting with [Ramp](https://ramp.com).
+An API wrapper for interacting with [Ramp](https://ramp.com).
