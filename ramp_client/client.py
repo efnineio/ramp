@@ -78,7 +78,7 @@ class RampClient(object):
             return self.s
         else:
             self.build_auth()
-            print(self.refresh_token)
+            # print(self.refresh_token)
             return self.s
 
     def save_creds_file(self):
@@ -138,7 +138,7 @@ class RampClient(object):
             try:
                 self.exchange_token()
             except Exception as e:
-                print("ERROR exchanging token")
+                # print("ERROR exchanging token")
                 raise e
         else:
             pass
@@ -150,21 +150,21 @@ class RampClient(object):
 
     def hit_api(self, verb, endpoint, params=None, data=None, json=None, headers={}):
         url = "{}{}".format(self.base_url, endpoint)
-        print(url)
+        # print(url)
         s = self.get_session()
 
         s.headers.update(headers)
 
         #print (s.headers)
         res = s.request(verb, url=url, data=data, params=params, json=json)
-        print(res.status_code)
+        # print(res.status_code)
         if res.status_code == 401:
             # print("need to re auth")
             self.access_token = None
             self.build_auth()
             s = self.get_session()
             res = s.request(verb, url=url, data=data, params=params, json=json)
-            print("second status code", res.status_code)
+            # print("second status code", res.status_code)
 
         return res
 
