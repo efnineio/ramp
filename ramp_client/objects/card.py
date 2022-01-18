@@ -39,7 +39,7 @@ class Card(SaveMixin, DeferredTaskMixin, IdempotencyMixin, RampBaseObject):
 
         ep = self.get_object_api_endpoint() + '/deferred/suspension'
         r = self._client.hit_api(verb='POST', endpoint=ep, json=data)
-        print(r.text)
+        # print(r.text)
 
     def create_virtual(self, client=None, key=None):
         if client: self._client = client
@@ -67,9 +67,7 @@ class Card(SaveMixin, DeferredTaskMixin, IdempotencyMixin, RampBaseObject):
             self.id = r.get('data').get('card_id')
 
             return self.refresh(client=self._client)
-        else:
-            print("card creation didn't succeed or failed to check status")
-
+        
     def delete(self, client=None, key=None):
         if client: self._client = client
 
@@ -79,7 +77,7 @@ class Card(SaveMixin, DeferredTaskMixin, IdempotencyMixin, RampBaseObject):
 
         ep = self.get_object_api_endpoint() + '/deferred/termination'
         r = self._client.hit_api(verb='POST', endpoint=ep, json=data)
-        print(r.text)
+        # print(r.text)
 
     def unsuspend(self, client=None, key=None):
         if client: self._client = client
@@ -91,7 +89,7 @@ class Card(SaveMixin, DeferredTaskMixin, IdempotencyMixin, RampBaseObject):
         ep = self.get_object_api_endpoint() + '/deferred/unsuspension'
         r = self._client.hit_api(verb='POST', endpoint=ep, json=data)
 
-        print(r.text)
+        # print(r.text)
 
     def refresh(self, client=None):
         if client: self._client = client
