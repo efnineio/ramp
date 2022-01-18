@@ -207,7 +207,7 @@ class DeferredTaskMixin(object):
         while i < 10 and task_status != 'FAILED':
             i += 1
             r = self.check_deferred_task(task_id)
-            print(r.json())
+            # print(r.json())
 
             # 'STARTED'
             if r.status_code == 200:
