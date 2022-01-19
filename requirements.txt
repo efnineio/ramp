@@ -1,4 +1,4 @@
 requests~=2.27.1
-simplejson~=3.17.6
+simplejson>=3.11,<3.18
 six~=1.16.0
-backoff>=1.8<2.0
+backoff>=1.8,<2.0
