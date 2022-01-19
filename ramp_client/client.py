@@ -158,7 +158,7 @@ class RampClient(object):
             getattr(err, "response", None) is None or err.response.status_code != 429
         ),
     )
-    def hit_api(self, verb, endpoint, params=None, data=None, json=None, headers={}, allow_retries: bool = True):
+    def hit_api(self, verb, endpoint, params=None, data=None, json=None, headers={}, retry: bool = True):
         url = "{}{}".format(self.base_url, endpoint)
         # print(url)
         s = self.get_session()
@@ -177,7 +177,7 @@ class RampClient(object):
             # print("second status code", res.status_code)
         # TODO: Not sure if they send the `Retry-After` header.
         # Something to consider in the the future.
-        if allow_retries and res.status_code == 429:
+        if retry and res.status_code == 429:
             # To allow users to decide if they
             # want to retry, we need to ensure 429-exceptions
             # aren't thrown so it never makes through `backoff`.
