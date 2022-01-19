@@ -158,22 +158,50 @@ class RampClient(object):
             getattr(err, "response", None) is None or err.response.status_code != 429
         ),
     )
-    def hit_api(self, verb, endpoint, params=None, data=None, json=None, headers={}, retry: bool = True):
+    def hit_api(
+        self, 
+        verb, 
+        endpoint, 
+        params=None, 
+        data=None, 
+        json=None, 
+        headers={}, 
+        retry: bool = True, 
+        **kwargs,
+    ):
         url = "{}{}".format(self.base_url, endpoint)
         # print(url)
         s = self.get_session()
 
         s.headers.update(headers)
 
+        default_timeout = kwargs.pop("timeout", 60)
+
         #print (s.headers)
-        res = s.request(verb, url=url, data=data, params=params, json=json)
+        res = s.request(
+            verb, 
+            url=url, 
+            data=data, 
+            params=params, 
+            json=json,
+            timeout=default_timeout,
+            **kwargs,
+        )
         # print(res.status_code)
         if res.status_code == 401:
             # print("need to re auth")
             self.access_token = None
             self.build_auth()
             s = self.get_session()
-            res = s.request(verb, url=url, data=data, params=params, json=json)
+            res = s.request(
+                verb, 
+                url=url, 
+                data=data, 
+                params=params, 
+                json=json,
+                timeout=default_timeout,
+                **kwargs,
+            )
             # print("second status code", res.status_code)
         # TODO: Not sure if they send the `Retry-After` header.
         # Something to consider in the the future.
