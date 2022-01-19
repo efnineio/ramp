@@ -165,7 +165,7 @@ class RampClient(object):
         params=None, 
         data=None, 
         json=None, 
-        headers={}, 
+        headers=None, 
         retry: bool = True, 
         **kwargs,
     ):
@@ -173,7 +173,8 @@ class RampClient(object):
         # print(url)
         s = self.get_session()
 
-        s.headers.update(headers)
+        if headers is not None:
+            s.headers.update(headers)
 
         default_timeout = kwargs.pop("timeout", 60)
 
