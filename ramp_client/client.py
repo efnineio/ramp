@@ -1,4 +1,5 @@
 import requests
+import backoff
 import urllib.parse as urlparse
 from urllib.parse import urlencode, parse_qs
 import json
@@ -148,7 +149,16 @@ class RampClient(object):
             "Authorization": "Bearer {}".format(self.access_token)
         })
 
-    def hit_api(self, verb, endpoint, params=None, data=None, json=None, headers={}):
+    @backoff.on_exception(
+        backoff.expo,
+        requests.exceptions.RequestException,
+        max_tries=8,
+        max_time=120,
+        giveup=lambda err: (
+            getattr(err, "response", None) is None or err.response.status_code != 429
+        ),
+    )
+    def hit_api(self, verb, endpoint, params=None, data=None, json=None, headers={}, allow_retries: bool = True):
         url = "{}{}".format(self.base_url, endpoint)
         # print(url)
         s = self.get_session()
@@ -165,6 +175,13 @@ class RampClient(object):
             s = self.get_session()
             res = s.request(verb, url=url, data=data, params=params, json=json)
             # print("second status code", res.status_code)
+        # TODO: Not sure if they send the `Retry-After` header.
+        # Something to consider in the the future.
+        if allow_retries and res.status_code == 429:
+            # To allow users to decide if they
+            # want to retry, we need to ensure 429-exceptions
+            # aren't thrown so it never makes through `backoff`.
+            res.raise_for_status()
 
         return res
 
